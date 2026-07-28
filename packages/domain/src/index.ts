@@ -4,4 +4,5 @@ export * from "./ports";
 export * from "./services/SignatureVerifier";
 export * from "./services/EventTypeMatcher";
 export * from "./services/SignatureGenerator";
+export * from "./services/BackoffCalculator";
 export * from "./ports/HttpDeliveryService";

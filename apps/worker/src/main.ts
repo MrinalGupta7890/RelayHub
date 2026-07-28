@@ -42,6 +42,7 @@ const executeDeliveryUseCase = new ExecuteDeliveryUseCase(
   eventRepository,
   destinationRepository,
   httpDeliveryService,
+  queueService,
   encryptionService,
   logger
 );

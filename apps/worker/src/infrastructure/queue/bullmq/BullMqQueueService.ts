@@ -34,12 +34,13 @@ export class BullMqQueueService implements QueueService {
     );
   }
 
-  async enqueueDelivery(deliveryAttemptId: string): Promise<void> {
+  async enqueueDelivery(deliveryAttemptId: string, delayMs?: number): Promise<void> {
     await this.deliveryQueue.add(
       "deliver",
       { deliveryAttemptId },
       {
         jobId: `deliver:${deliveryAttemptId}`,
+        ...(delayMs !== undefined ? { delay: delayMs } : {}),
       }
     );
   }

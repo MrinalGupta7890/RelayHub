@@ -5,6 +5,8 @@ import {
   HttpDeliveryService,
   SignatureGenerator,
   DeliveryStatus,
+  QueueService,
+  BackoffCalculator,
 } from "@relayhub/domain";
 import { AesEncryptionService } from "../../../infrastructure/crypto/AesEncryptionService";
 import { Logger } from "pino";
@@ -15,6 +17,7 @@ export class ExecuteDeliveryUseCase {
     private readonly eventRepository: EventRepository,
     private readonly destinationRepository: DestinationRepository,
     private readonly httpDeliveryService: HttpDeliveryService,
+    private readonly queueService: QueueService,
     private readonly encryptionService: AesEncryptionService,
     private readonly logger: Logger
   ) {}
@@ -84,9 +87,35 @@ export class ExecuteDeliveryUseCase {
     });
 
     if (!result.success) {
-      // In Phase 9, we throw an error if it failed, so BullMQ knows the job failed.
-      // In Phase 10, the RetryEngine might handle this without throwing, or the failure will trigger the backoff.
-      throw new Error(`Delivery failed with status ${result.status}: ${result.error || result.body}`);
+      this.logger.warn(
+        { attemptId: attempt.id, status: result.status, attemptNumber: attempt.attemptNumber },
+        "Delivery failed"
+      );
+      
+      const retryPolicy = destination.retryPolicy;
+      if (attempt.attemptNumber < retryPolicy.maxAttempts) {
+        const delayMs = BackoffCalculator.calculateDelay(attempt.attemptNumber, retryPolicy);
+        
+        const nextAttempt = await this.deliveryAttemptRepository.create({
+          eventId: event.id,
+          destinationId: destination.id,
+          attemptNumber: attempt.attemptNumber + 1,
+          status: DeliveryStatus.QUEUED,
+          scheduledAt: new Date(Date.now() + delayMs),
+        });
+
+        await this.queueService.enqueueDelivery(nextAttempt.id, delayMs);
+        
+        this.logger.info(
+          { attemptId: attempt.id, nextAttemptId: nextAttempt.id, delayMs },
+          "Scheduled next delivery attempt"
+        );
+      } else {
+        this.logger.error(
+          { attemptId: attempt.id, eventId: event.id },
+          "Max delivery attempts reached. Delivery permanently failed."
+        );
+      }
     }
   }
 }

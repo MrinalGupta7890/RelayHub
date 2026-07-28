@@ -11,5 +11,5 @@ export interface QueueService {
    * Enqueues a delivery attempt for processing.
    * This corresponds to the `delivery.retry` queue.
    */
-  enqueueDelivery(deliveryAttemptId: string): Promise<void>;
+  enqueueDelivery(deliveryAttemptId: string, delayMs?: number): Promise<void>;
 }
