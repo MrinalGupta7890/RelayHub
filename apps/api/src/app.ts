@@ -27,6 +27,7 @@ import { createReplayRoutes } from "./presentation/http/routes/replay.routes";
 import { ReplayController } from "./presentation/http/controllers/ReplayController";
 import { createAuditLogRoutes } from "./presentation/http/routes/audit-logs.routes";
 import { AuditLogController } from "./presentation/http/controllers/AuditLogController";
+import { authLimiter, ingestLimiter } from "./infrastructure/http/rate-limit";
 import { register, collectDefaultMetrics } from "prom-client";
 
 // Start collecting default Node metrics
@@ -78,7 +79,7 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
   app.use(pinoHttp({ logger }));
 
   if (deps.authController) {
-    app.use("/api/v1/auth", createAuthRoutes(deps.authController));
+    app.use("/api/v1/auth", authLimiter, createAuthRoutes(deps.authController));
   }
   
   if (deps.organizationController) {
@@ -111,7 +112,7 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
   }
 
   if (deps.ingestionController) {
-    app.use("/ingest", createIngestionRoutes(deps.ingestionController));
+    app.use("/ingest", ingestLimiter, createIngestionRoutes(deps.ingestionController));
   }
 
   if (deps.analyticsController) {
