@@ -6,8 +6,10 @@ import Redis from "ioredis";
 import { BullMqQueueService } from "./infrastructure/queue/bullmq/BullMqQueueService";
 import { EventFanoutUseCase } from "./application/use-cases/fanout/EventFanoutUseCase";
 import { ExecuteDeliveryUseCase } from "./application/use-cases/delivery/ExecuteDeliveryUseCase";
+import { ExecuteReplayUseCase } from "./application/use-cases/replay/ExecuteReplayUseCase";
 import { FanoutWorker } from "./infrastructure/queue/bullmq/FanoutWorker";
 import { DeliveryWorker } from "./infrastructure/queue/bullmq/DeliveryWorker";
+import { ReplayWorker } from "./infrastructure/queue/processors/ReplayWorker";
 import { FetchHttpDeliveryService } from "./infrastructure/http/FetchHttpDeliveryService";
 import { AesEncryptionService } from "./infrastructure/crypto/AesEncryptionService";
 
@@ -47,11 +49,19 @@ const executeDeliveryUseCase = new ExecuteDeliveryUseCase(
   logger
 );
 
+const executeReplayUseCase = new ExecuteReplayUseCase(
+  eventRepository,
+  deliveryAttemptRepository,
+  queueService,
+  logger
+);
+
 // Workers
 const fanoutWorker = new FanoutWorker(redis, eventFanoutUseCase, logger);
 const deliveryWorker = new DeliveryWorker(redis, executeDeliveryUseCase, logger);
+const replayWorker = new ReplayWorker(redis, executeReplayUseCase, logger);
 
-logger.info({ queues: ["ingestion.fanout", "delivery.retry"] }, "Workers started");
+logger.info({ queues: ["ingestion.fanout", "delivery.retry", "delivery.replay"] }, "Workers started");
 
 // Start health server
 const healthApp = createHealthServer(logger, {
@@ -70,6 +80,7 @@ async function shutdown(signal: string) {
 
   await fanoutWorker.close();
   await deliveryWorker.close();
+  await replayWorker.close();
   await redis.quit();
 
   server.close(async () => {

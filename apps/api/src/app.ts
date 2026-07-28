@@ -23,6 +23,8 @@ import { createIngestionRoutes } from "./presentation/http/routes/ingest.routes"
 import { IngestionController } from "./presentation/http/controllers/IngestionController";
 import { createAnalyticsRoutes } from "./presentation/http/routes/analytics.routes";
 import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
+import { createReplayRoutes } from "./presentation/http/routes/replay.routes";
+import { ReplayController } from "./presentation/http/controllers/ReplayController";
 const SERVICE_NAME = "relayhub-api";
 const SERVICE_VERSION = "0.1.0";
 const startedAt = Date.now();
@@ -39,6 +41,7 @@ export interface AppDependencies {
   destinationController?: DestinationController;
   ingestionController?: IngestionController;
   analyticsController?: AnalyticsController;
+  replayController?: ReplayController;
 }
 
 const defaultDeps: AppDependencies = {
@@ -102,6 +105,10 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
 
   if (deps.analyticsController) {
     app.use("/api/v1/environments/:envId/analytics", createAnalyticsRoutes(deps.analyticsController));
+  }
+
+  if (deps.replayController) {
+    app.use("/api/v1/environments/:envId", createReplayRoutes(deps.replayController));
   }
 
   app.get("/healthz", (_req: Request, res: Response) => {

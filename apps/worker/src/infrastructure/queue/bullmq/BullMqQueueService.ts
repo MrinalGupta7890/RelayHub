@@ -5,6 +5,7 @@ import { QueueService, EventId } from "@relayhub/domain";
 export class BullMqQueueService implements QueueService {
   private fanoutQueue: Queue;
   private deliveryQueue: Queue;
+  private replayQueue: Queue;
 
   constructor(private readonly redisConnection: Redis) {
     this.fanoutQueue = new Queue("ingestion.fanout", {
@@ -16,6 +17,14 @@ export class BullMqQueueService implements QueueService {
     });
 
     this.deliveryQueue = new Queue("delivery.retry", {
+      connection: this.redisConnection,
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    });
+
+    this.replayQueue = new Queue("replay", {
       connection: this.redisConnection,
       defaultJobOptions: {
         removeOnComplete: true,
@@ -41,6 +50,16 @@ export class BullMqQueueService implements QueueService {
       {
         jobId: `deliver:${deliveryAttemptId}`,
         ...(delayMs !== undefined ? { delay: delayMs } : {}),
+      }
+    );
+  }
+
+  async enqueueReplay(eventId: string, destinationId?: string): Promise<void> {
+    await this.replayQueue.add(
+      "replay",
+      { eventId, destinationId },
+      {
+        jobId: `replay:${eventId}:${destinationId || "all"}:${Date.now()}`
       }
     );
   }

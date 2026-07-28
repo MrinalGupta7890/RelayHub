@@ -74,7 +74,12 @@ export class ExecuteDeliveryUseCase {
     );
 
     // Update Attempt Result
-    const finalStatus = result.success ? DeliveryStatus.SUCCEEDED : DeliveryStatus.FAILED;
+    let finalStatus = result.success ? DeliveryStatus.SUCCEEDED : DeliveryStatus.FAILED;
+    const retryPolicy = destination.retryPolicy;
+
+    if (!result.success && attempt.attemptNumber >= retryPolicy.maxAttempts) {
+      finalStatus = DeliveryStatus.DEAD_LETTERED;
+    }
 
     await this.deliveryAttemptRepository.updateStatus(attempt.id, {
       status: finalStatus,
@@ -92,8 +97,7 @@ export class ExecuteDeliveryUseCase {
         "Delivery failed"
       );
       
-      const retryPolicy = destination.retryPolicy;
-      if (attempt.attemptNumber < retryPolicy.maxAttempts) {
+      if (finalStatus === DeliveryStatus.FAILED) {
         const delayMs = BackoffCalculator.calculateDelay(attempt.attemptNumber, retryPolicy);
         
         const nextAttempt = await this.deliveryAttemptRepository.create({
@@ -113,7 +117,7 @@ export class ExecuteDeliveryUseCase {
       } else {
         this.logger.error(
           { attemptId: attempt.id, eventId: event.id },
-          "Max delivery attempts reached. Delivery permanently failed."
+          "Max delivery attempts reached. Attempt dead-lettered."
         );
       }
     }

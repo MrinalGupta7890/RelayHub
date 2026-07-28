@@ -12,4 +12,10 @@ export interface QueueService {
    * This corresponds to the `delivery.retry` queue.
    */
   enqueueDelivery(deliveryAttemptId: string, delayMs?: number): Promise<void>;
+
+  /**
+   * Enqueues a replay job for an event and optionally a specific destination.
+   * This corresponds to the `replay` queue.
+   */
+  enqueueReplay(eventId: EventId, destinationId?: string): Promise<void>;
 }

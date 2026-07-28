@@ -47,6 +47,8 @@ import { GetSourceEventsUseCase } from "./application/use-cases/analytics/GetSou
 import { GetEventAttemptsUseCase } from "./application/use-cases/analytics/GetEventAttemptsUseCase";
 import { GetDestinationAttemptsUseCase } from "./application/use-cases/analytics/GetDestinationAttemptsUseCase";
 import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
+import { ReplayEventUseCase } from "./application/use-cases/replay/ReplayEventUseCase";
+import { ReplayController } from "./presentation/http/controllers/ReplayController";
 
 const env = loadApiEnv();
 const logger = createLogger(env);
@@ -112,6 +114,9 @@ const getEventAttemptsUseCase = new GetEventAttemptsUseCase(eventRepository, sou
 const getDestinationAttemptsUseCase = new GetDestinationAttemptsUseCase(destinationRepository, deliveryAttemptRepository);
 const analyticsController = new AnalyticsController(getSourceEventsUseCase, getEventAttemptsUseCase, getDestinationAttemptsUseCase);
 
+const replayEventUseCase = new ReplayEventUseCase(eventRepository, sourceRepository, destinationRepository, queueService);
+const replayController = new ReplayController(replayEventUseCase);
+
 const app = createApp(logger, {
   checkDatabase: () => checkDatabaseConnection(prisma),
   authController,
@@ -123,6 +128,7 @@ const app = createApp(logger, {
   destinationController,
   ingestionController,
   analyticsController,
+  replayController,
 });
 
 const server = app.listen(env.API_PORT, () => {
