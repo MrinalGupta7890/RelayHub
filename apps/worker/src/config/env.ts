@@ -9,6 +9,7 @@ import { baseEnvSchema, parseEnv } from "@relayhub/shared-config";
 const workerEnvSchema = baseEnvSchema.extend({
   WORKER_PORT: z.coerce.number().int().positive().default(4100),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  ENCRYPTION_MASTER_KEY: z.string().min(64, "ENCRYPTION_MASTER_KEY must be a 64-character hex string (32 bytes)"),
 });
 
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;

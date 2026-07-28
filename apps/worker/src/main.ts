@@ -5,7 +5,11 @@ import { getPrismaClient, checkDatabaseConnection, PrismaEventRepository, Prisma
 import Redis from "ioredis";
 import { BullMqQueueService } from "./infrastructure/queue/bullmq/BullMqQueueService";
 import { EventFanoutUseCase } from "./application/use-cases/fanout/EventFanoutUseCase";
+import { ExecuteDeliveryUseCase } from "./application/use-cases/delivery/ExecuteDeliveryUseCase";
 import { FanoutWorker } from "./infrastructure/queue/bullmq/FanoutWorker";
+import { DeliveryWorker } from "./infrastructure/queue/bullmq/DeliveryWorker";
+import { FetchHttpDeliveryService } from "./infrastructure/http/FetchHttpDeliveryService";
+import { AesEncryptionService } from "./infrastructure/crypto/AesEncryptionService";
 
 const env = loadWorkerEnv();
 const logger = createLogger(env);
@@ -21,6 +25,8 @@ const deliveryAttemptRepository = new PrismaDeliveryAttemptRepository(prisma);
 
 // Infrastructure Services
 const queueService = new BullMqQueueService(redis);
+const httpDeliveryService = new FetchHttpDeliveryService();
+const encryptionService = new AesEncryptionService(env.ENCRYPTION_MASTER_KEY);
 
 // Use Cases
 const eventFanoutUseCase = new EventFanoutUseCase(
@@ -31,10 +37,20 @@ const eventFanoutUseCase = new EventFanoutUseCase(
   queueService
 );
 
+const executeDeliveryUseCase = new ExecuteDeliveryUseCase(
+  deliveryAttemptRepository,
+  eventRepository,
+  destinationRepository,
+  httpDeliveryService,
+  encryptionService,
+  logger
+);
+
 // Workers
 const fanoutWorker = new FanoutWorker(redis, eventFanoutUseCase, logger);
+const deliveryWorker = new DeliveryWorker(redis, executeDeliveryUseCase, logger);
 
-logger.info({ queue: "ingestion.fanout" }, "Fanout Worker started");
+logger.info({ queues: ["ingestion.fanout", "delivery.retry"] }, "Workers started");
 
 // Start health server
 const healthApp = createHealthServer(logger, {
@@ -52,6 +68,7 @@ async function shutdown(signal: string) {
   logger.info({ signal }, "Worker shutting down...");
 
   await fanoutWorker.close();
+  await deliveryWorker.close();
   await redis.quit();
 
   server.close(async () => {
