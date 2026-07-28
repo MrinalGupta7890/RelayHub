@@ -3,16 +3,12 @@ import { LoginPage } from "../features/auth/pages/LoginPage";
 import { RegisterPage } from "../features/auth/pages/RegisterPage";
 import { Layout, RequireAuth } from "./Layout";
 import { useAuth } from "../features/auth/AuthContext";
-
-// A temporary placeholder for the dashboard home
-function DashboardHome() {
-  return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
-      <p className="text-muted-foreground">Welcome to your RelayHub workspace.</p>
-    </div>
-  );
-}
+import { DashboardPage } from "../features/dashboard/DashboardPage";
+import { DestinationsPage } from "../features/destinations/DestinationsPage";
+import { EventsPage } from "../features/events/EventsPage";
+import { EventDetailsPage } from "../features/events/EventDetailsPage";
+import { AuditLogsPage } from "../features/audit-logs/AuditLogsPage";
+import { SettingsPage } from "../features/settings/SettingsPage";
 
 // Redirects to dashboard if already logged in
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -50,9 +46,28 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <DashboardHome />,
-      }
-      // Future routes (Events, Destinations, etc.) will go here
+        element: <DashboardPage />,
+      },
+      {
+        path: "destinations",
+        element: <DestinationsPage />,
+      },
+      {
+        path: "events",
+        element: <EventsPage />,
+      },
+      {
+        path: "events/:id",
+        element: <EventDetailsPage />,
+      },
+      {
+        path: "audit-logs",
+        element: <AuditLogsPage />,
+      },
+      {
+        path: "settings",
+        element: <SettingsPage />,
+      },
     ],
   },
 ]);
