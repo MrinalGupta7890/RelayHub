@@ -1,0 +1,224 @@
+// RelayHub — Prisma schema
+// Implements architecture doc Section 11 (Database Schema) exactly.
+// Naming: Prisma models are PascalCase singular; Postgres table names are
+// mapped to snake_case plural via @@map for conventional SQL readability
+// (this is a deliberate addition beyond Section 11's sketch — Prisma model
+// names stay ergonomic in TS while the actual SQL reads like normal Postgres).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum VerificationType {
+  HMAC_SHA256
+  HMAC_SHA1
+  NONE
+}
+
+enum DeliveryStatus {
+  QUEUED
+  IN_PROGRESS
+  SUCCEEDED
+  FAILED
+  DEAD_LETTERED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  memberships  Membership[]
+  auditLogs    AuditLogEntry[]
+  sessions     Session[]
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@map("users")
+}
+
+model Organization {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  memberships Membership[]
+  projects    Project[]
+  auditLogs   AuditLogEntry[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String       @map("user_id")
+  organizationId String       @map("organization_id")
+  role           Role         @default(MEMBER)
+  user           User         @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("memberships")
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String        @map("organization_id")
+  name           String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  environments   Environment[]
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  @@index([organizationId])
+  @@map("projects")
+}
+
+model Environment {
+  id           String        @id @default(cuid())
+  projectId    String        @map("project_id")
+  name         String
+  project      Project       @relation(fields: [projectId], references: [id])
+  apiKeys      ApiKey[]
+  sources      Source[]
+  destinations Destination[]
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  @@unique([projectId, name])
+  @@map("environments")
+}
+
+model ApiKey {
+  id            String      @id @default(cuid())
+  environmentId String      @map("environment_id")
+  prefix        String      @unique
+  secretHash    String      @map("secret_hash")
+  name          String
+  revokedAt     DateTime?   @map("revoked_at")
+  environment   Environment @relation(fields: [environmentId], references: [id])
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([environmentId])
+  @@map("api_keys")
+}
+
+model Source {
+  id               String            @id @default(cuid())
+  environmentId    String            @map("environment_id")
+  name             String
+  verificationType VerificationType  @default(HMAC_SHA256) @map("verification_type")
+  secretEncrypted  String            @map("secret_encrypted")
+  ingestionSlug    String            @unique @map("ingestion_slug")
+  environment      Environment       @relation(fields: [environmentId], references: [id])
+  events           Event[]
+  createdAt        DateTime          @default(now()) @map("created_at")
+  deletedAt        DateTime?         @map("deleted_at")
+
+  @@index([environmentId])
+  @@map("sources")
+}
+
+model Destination {
+  id               String            @id @default(cuid())
+  environmentId    String            @map("environment_id")
+  name             String
+  url              String
+  secretEncrypted  String            @map("secret_encrypted")
+  eventTypeFilters String[]          @map("event_type_filters")
+  customHeaders    Json?             @map("custom_headers")
+  retryPolicy      Json              @map("retry_policy")
+  isActive         Boolean           @default(true) @map("is_active")
+  environment      Environment       @relation(fields: [environmentId], references: [id])
+  attempts         DeliveryAttempt[]
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  deletedAt        DateTime?         @map("deleted_at")
+
+  @@index([environmentId])
+  @@map("destinations")
+}
+
+model Event {
+  id             String            @id @default(cuid())
+  sourceId       String            @map("source_id")
+  eventType      String            @map("event_type")
+  idempotencyKey String            @map("idempotency_key")
+  payload        Json
+  headers        Json
+  correlationId  String            @map("correlation_id")
+  source         Source            @relation(fields: [sourceId], references: [id])
+  attempts       DeliveryAttempt[]
+  receivedAt     DateTime          @default(now()) @map("received_at")
+
+  @@unique([sourceId, idempotencyKey])
+  @@index([sourceId, eventType])
+  @@index([correlationId])
+  @@map("events")
+}
+
+model DeliveryAttempt {
+  id              String         @id @default(cuid())
+  eventId         String         @map("event_id")
+  destinationId   String         @map("destination_id")
+  attemptNumber   Int            @default(1) @map("attempt_number")
+  status          DeliveryStatus @default(QUEUED)
+  requestSnapshot Json?          @map("request_snapshot")
+  responseStatus  Int?           @map("response_status")
+  responseBody    String?        @map("response_body")
+  errorMessage    String?        @map("error_message")
+  durationMs      Int?           @map("duration_ms")
+  event           Event          @relation(fields: [eventId], references: [id])
+  destination     Destination    @relation(fields: [destinationId], references: [id])
+  scheduledAt     DateTime       @default(now()) @map("scheduled_at")
+  completedAt     DateTime?      @map("completed_at")
+
+  @@index([eventId])
+  @@index([destinationId, status])
+  @@index([status, scheduledAt])
+  @@map("delivery_attempts")
+}
+
+model AuditLogEntry {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  userId         String?      @map("user_id")
+  action         String
+  metadata       Json?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User?        @relation(fields: [userId], references: [id])
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@map("audit_log_entries")
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  refreshTokenHash String   @map("refresh_token_hash")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("sessions")
+}

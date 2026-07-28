@@ -1,0 +1,43 @@
+# Phase 1 scope: data stores only. The api/worker/web services will be added
+# to this file once they have real logic worth containerizing for local dev
+# (api joins in Phase 2 alongside the DB layer; worker in Phase 7 alongside
+# the queue layer; web in Phase 18). Until then they run directly via
+# `pnpm dev:*` against these containers, which is faster for iteration anyway.
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: relayhub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-relayhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-relayhub_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-relayhub}
+    ports:
+      - "5432:5432"
+    volumes:
+      - relayhub_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-relayhub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: relayhub-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - relayhub_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  relayhub_postgres_data:
+  relayhub_redis_data:
