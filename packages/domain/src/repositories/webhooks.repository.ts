@@ -26,6 +26,7 @@ export interface DestinationRepository {
     retryPolicy: RetryPolicy;
   }): Promise<Destination>;
   findById(id: DestinationId): Promise<Destination | null>;
+  listByEnvironment(environmentId: EnvironmentId): Promise<Destination[]>;
   /** Active destinations whose eventTypeFilters match a given event type —
    *  backs the fan-out step (Section 14, step 6). Filter matching itself is
    *  a domain concern implemented as a pure function in Phase 8, not here;

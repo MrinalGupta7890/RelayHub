@@ -15,7 +15,10 @@ import { createEnvironmentRoutes } from "./presentation/http/routes/environments
 import { EnvironmentController } from "./presentation/http/controllers/EnvironmentController";
 import { createApiKeyRoutes } from "./presentation/http/routes/api-keys.routes";
 import { ApiKeyController } from "./presentation/http/controllers/ApiKeyController";
-
+import { createSourceRoutes } from "./presentation/http/routes/sources.routes";
+import { SourceController } from "./presentation/http/controllers/SourceController";
+import { createDestinationRoutes } from "./presentation/http/routes/destinations.routes";
+import { DestinationController } from "./presentation/http/controllers/DestinationController";
 const SERVICE_NAME = "relayhub-api";
 const SERVICE_VERSION = "0.1.0";
 const startedAt = Date.now();
@@ -28,6 +31,8 @@ export interface AppDependencies {
   projectController?: ProjectController;
   environmentController?: EnvironmentController;
   apiKeyController?: ApiKeyController;
+  sourceController?: SourceController;
+  destinationController?: DestinationController;
 }
 
 const defaultDeps: AppDependencies = {
@@ -71,6 +76,14 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
 
   if (deps.apiKeyController) {
     app.use("/api/v1/environments/:envId/api-keys", createApiKeyRoutes(deps.apiKeyController));
+  }
+
+  if (deps.sourceController) {
+    app.use("/api/v1/environments/:envId/sources", createSourceRoutes(deps.sourceController));
+  }
+
+  if (deps.destinationController) {
+    app.use("/api/v1/environments/:envId/destinations", createDestinationRoutes(deps.destinationController));
   }
 
   app.get("/healthz", (_req: Request, res: Response) => {

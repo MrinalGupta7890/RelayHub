@@ -27,6 +27,18 @@ import { ListApiKeysUseCase } from "./application/use-cases/api-keys/ListApiKeys
 import { RevokeApiKeyUseCase } from "./application/use-cases/api-keys/RevokeApiKeyUseCase";
 import { ApiKeyController } from "./presentation/http/controllers/ApiKeyController";
 
+import { CreateSourceUseCase } from "./application/use-cases/sources/CreateSourceUseCase";
+import { ListSourcesUseCase } from "./application/use-cases/sources/ListSourcesUseCase";
+import { SourceController } from "./presentation/http/controllers/SourceController";
+
+import { CreateDestinationUseCase } from "./application/use-cases/destinations/CreateDestinationUseCase";
+import { ListDestinationsUseCase } from "./application/use-cases/destinations/ListDestinationsUseCase";
+import { UpdateDestinationUseCase } from "./application/use-cases/destinations/UpdateDestinationUseCase";
+import { DestinationController } from "./presentation/http/controllers/DestinationController";
+
+import { AesEncryptionService } from "./infrastructure/crypto/AesEncryptionService";
+import { PrismaSourceRepository, PrismaDestinationRepository } from "@relayhub/database";
+
 const env = loadApiEnv();
 const logger = createLogger(env);
 const prisma = getPrismaClient({ logQueries: env.NODE_ENV === "development" });
@@ -37,6 +49,7 @@ const userRepository = new PrismaUserRepository(prisma);
 const sessionRepository = new PrismaSessionRepository(prisma);
 const passwordHasher = new Argon2PasswordHasher();
 const tokenService = new JwtTokenService(env.JWT_SECRET);
+const encryptionService = new AesEncryptionService(env.ENCRYPTION_MASTER_KEY);
 
 const organizationRepository = new PrismaOrganizationRepository(prisma);
 const projectRepository = new PrismaProjectRepository(prisma);
@@ -44,6 +57,8 @@ const membershipRepository = new PrismaMembershipRepository(prisma);
 const auditLogRepository = new PrismaAuditLogRepository(prisma);
 const environmentRepository = new PrismaEnvironmentRepository(prisma);
 const apiKeyRepository = new PrismaApiKeyRepository(prisma);
+const sourceRepository = new PrismaSourceRepository(prisma);
+const destinationRepository = new PrismaDestinationRepository(prisma);
 
 const registerUseCase = new RegisterUserUseCase(userRepository, passwordHasher);
 const loginUseCase = new LoginUserUseCase(userRepository, sessionRepository, passwordHasher, tokenService);
@@ -67,6 +82,15 @@ const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository, auditLogRepository);
 const apiKeyController = new ApiKeyController(createApiKeyUseCase, listApiKeysUseCase, revokeApiKeyUseCase);
 
+const createSourceUseCase = new CreateSourceUseCase(sourceRepository, encryptionService);
+const listSourcesUseCase = new ListSourcesUseCase(sourceRepository);
+const sourceController = new SourceController(createSourceUseCase, listSourcesUseCase);
+
+const createDestinationUseCase = new CreateDestinationUseCase(destinationRepository, encryptionService);
+const listDestinationsUseCase = new ListDestinationsUseCase(destinationRepository);
+const updateDestinationUseCase = new UpdateDestinationUseCase(destinationRepository);
+const destinationController = new DestinationController(createDestinationUseCase, listDestinationsUseCase, updateDestinationUseCase);
+
 const app = createApp(logger, {
   checkDatabase: () => checkDatabaseConnection(prisma),
   authController,
@@ -74,6 +98,8 @@ const app = createApp(logger, {
   projectController,
   environmentController,
   apiKeyController,
+  sourceController,
+  destinationController,
 });
 
 const server = app.listen(env.API_PORT, () => {

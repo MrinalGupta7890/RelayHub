@@ -7,6 +7,6 @@ export function createLogger(env: WorkerEnv) {
     transport:
       env.NODE_ENV === "development"
         ? { target: "pino-pretty", options: { colorize: true, translateTime: "HH:MM:ss" } }
-        : undefined,
+        : { target: "pino/file", options: { destination: 1 } },
   });
 }

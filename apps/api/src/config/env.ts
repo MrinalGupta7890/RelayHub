@@ -16,6 +16,7 @@ const apiEnvSchema = baseEnvSchema.extend({
   // itself will reject a malformed value with a clear error at connect time.
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters long"),
+  ENCRYPTION_MASTER_KEY: z.string().length(64, "ENCRYPTION_MASTER_KEY must be exactly 64 hex characters (32 bytes)"),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

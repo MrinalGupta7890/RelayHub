@@ -82,6 +82,14 @@ export class PrismaDestinationRepository implements DestinationRepository {
     return record ? cast<Destination>(record) : null;
   }
 
+  async listByEnvironment(environmentId: EnvironmentId): Promise<Destination[]> {
+    const records = await this.prisma.destination.findMany({
+      where: { environmentId, deletedAt: null },
+      orderBy: { createdAt: "asc" },
+    });
+    return cast<Destination[]>(records);
+  }
+
   async listActiveByEnvironment(environmentId: EnvironmentId): Promise<Destination[]> {
     const records = await this.prisma.destination.findMany({
       where: { environmentId, deletedAt: null, isActive: true },
