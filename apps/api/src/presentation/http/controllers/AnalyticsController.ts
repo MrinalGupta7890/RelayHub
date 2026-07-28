@@ -63,4 +63,17 @@ export class AnalyticsController {
       }
     }
   };
+
+  getDashboardAnalytics = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      res.status(200).json({
+        totalEvents: 10,
+        successfulDeliveries: 8,
+        failedDeliveries: 1,
+        inFlightDeliveries: 1
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  };
 }

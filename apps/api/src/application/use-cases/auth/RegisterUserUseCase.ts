@@ -1,4 +1,4 @@
-import { UserRepository, PasswordHasher, User } from "@relayhub/domain";
+import { UserRepository, PasswordHasher, User, OrganizationRepository, MembershipRepository, ProjectRepository, EnvironmentRepository, Role } from "@relayhub/domain";
 
 export type RegisterUserInput = {
   email: string;
@@ -9,7 +9,11 @@ export type RegisterUserInput = {
 export class RegisterUserUseCase {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly passwordHasher: PasswordHasher
+    private readonly passwordHasher: PasswordHasher,
+    private readonly organizationRepository: OrganizationRepository,
+    private readonly membershipRepository: MembershipRepository,
+    private readonly projectRepository: ProjectRepository,
+    private readonly environmentRepository: EnvironmentRepository
   ) {}
 
   async execute(input: RegisterUserInput): Promise<User> {
@@ -19,10 +23,17 @@ export class RegisterUserUseCase {
     }
 
     const passwordHash = await this.passwordHasher.hash(input.passwordRaw);
-    return this.userRepository.create({
+    const user = await this.userRepository.create({
       email: input.email,
       passwordHash,
       name: input.name,
     });
+
+    const org = await this.organizationRepository.create({ name: `${input.name}'s Org`, slug: `org-${user.id.substring(0,8)}` });
+    await this.membershipRepository.create({ userId: user.id, organizationId: org.id, role: Role.OWNER });
+    const project = await this.projectRepository.create({ organizationId: org.id, name: "Default Project" });
+    await this.environmentRepository.create({ projectId: project.id, name: "production" });
+
+    return user;
   }
 }

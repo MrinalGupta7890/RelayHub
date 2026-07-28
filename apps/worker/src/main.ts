@@ -19,7 +19,7 @@ const env = loadWorkerEnv();
 const logger = createLogger(env);
 
 const prisma = getPrismaClient({ logQueries: env.NODE_ENV === "development" });
-const redis = new Redis(env.REDIS_URL);
+const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
 
 // Repositories
 const eventRepository = new PrismaEventRepository(prisma);

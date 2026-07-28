@@ -10,7 +10,7 @@ const redisClient = new Redis(env.REDIS_URL);
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per `window` (here, per 15 minutes)
+  max: process.env.NODE_ENV === "development" ? 1000 : 5, // Relaxed for local dev
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({

@@ -12,6 +12,7 @@ export function createAnalyticsRoutes(analyticsController: AnalyticsController):
   router.use(tenancyGuard);
   router.use(requireRole(["OWNER", "ADMIN", "MEMBER"]));
 
+  router.get("/", analyticsController.getDashboardAnalytics);
   router.get("/sources/:sourceId/events", analyticsController.getSourceEvents);
   router.get("/events/:eventId/attempts", analyticsController.getEventAttempts);
   router.get("/destinations/:destinationId/attempts", analyticsController.getDestinationAttempts);

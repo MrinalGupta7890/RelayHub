@@ -60,8 +60,8 @@ import { WebSocketGateway } from "./presentation/websocket/WebSocketGateway";
 const env = loadApiEnv();
 const logger = createLogger(env);
 const prisma = getPrismaClient({ logQueries: env.NODE_ENV === "development" });
-const redis = new Redis(env.REDIS_URL);
-const redisSub = new Redis(env.REDIS_URL);
+const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
+const redisSub = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
 const queueService = new BullMqQueueService(redis);
 const wsEmitterService = new RedisWsEmitter(redis);
 
@@ -83,7 +83,7 @@ const sourceRepository = new PrismaSourceRepository(prisma);
 const destinationRepository = new PrismaDestinationRepository(prisma);
 const eventRepository = new PrismaEventRepository(prisma);
 
-const registerUseCase = new RegisterUserUseCase(userRepository, passwordHasher);
+const registerUseCase = new RegisterUserUseCase(userRepository, passwordHasher, organizationRepository, membershipRepository, projectRepository, environmentRepository);
 const loginUseCase = new LoginUserUseCase(userRepository, sessionRepository, passwordHasher, tokenService);
 const refreshUseCase = new RefreshSessionUseCase(sessionRepository, tokenService);
 const authController = new AuthController(registerUseCase, loginUseCase, refreshUseCase);
@@ -120,6 +120,9 @@ const metricsService = new PrometheusMetricsService();
 const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService, wsEmitterService, metricsService);
 const ingestionController = new IngestionController(ingestEventUseCase);
 
+import { RetryEventUseCase } from "./application/use-cases/events/RetryEventUseCase";
+import { EventController } from "./presentation/http/controllers/EventController";
+
 import { SimulateEventUseCase } from "./application/use-cases/simulation/SimulateEventUseCase";
 import { SimulationController } from "./presentation/http/controllers/SimulationController";
 const simulateEventUseCase = new SimulateEventUseCase(sourceRepository, eventRepository, queueService, wsEmitterService, metricsService);
@@ -133,6 +136,9 @@ const analyticsController = new AnalyticsController(getSourceEventsUseCase, getE
 
 const replayEventUseCase = new ReplayEventUseCase(eventRepository, sourceRepository, destinationRepository, queueService);
 const replayController = new ReplayController(replayEventUseCase);
+
+const retryEventUseCase = new RetryEventUseCase(eventRepository, queueService, deliveryAttemptRepository);
+const eventController = new EventController(retryEventUseCase);
 
 const listAuditLogsUseCase = new ListAuditLogsUseCase(auditLogRepository);
 const auditLogController = new AuditLogController(listAuditLogsUseCase);
@@ -149,6 +155,7 @@ const app = createApp(logger, {
   ingestionController,
   simulationController,
   analyticsController,
+  eventController,
   replayController,
   auditLogController,
 });

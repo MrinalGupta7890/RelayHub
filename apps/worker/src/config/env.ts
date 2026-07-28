@@ -14,6 +14,10 @@ const workerEnvSchema = baseEnvSchema.extend({
 
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 
+import { config as loadDotenv } from "dotenv";
+import path from "path";
+loadDotenv({ path: path.resolve(__dirname, "../../../../.env") });
+
 export function loadWorkerEnv(source: NodeJS.ProcessEnv = process.env): WorkerEnv {
   return parseEnv(workerEnvSchema, source);
 }

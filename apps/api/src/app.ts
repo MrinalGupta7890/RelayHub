@@ -24,6 +24,7 @@ import { IngestionController } from "./presentation/http/controllers/IngestionCo
 import { createSimulationRoutes } from "./presentation/http/routes/simulation.routes";
 import { SimulationController } from "./presentation/http/controllers/SimulationController";
 import { createAnalyticsRoutes } from "./presentation/http/routes/analytics.routes";
+import { createEventsRoutes } from "./presentation/http/routes/events.routes";
 import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
 import { createReplayRoutes } from "./presentation/http/routes/replay.routes";
 import { ReplayController } from "./presentation/http/controllers/ReplayController";
@@ -53,6 +54,7 @@ export interface AppDependencies {
   analyticsController?: AnalyticsController;
   replayController?: ReplayController;
   auditLogController?: AuditLogController;
+  eventController?: any;
 }
 
 const defaultDeps: AppDependencies = {
@@ -72,7 +74,10 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
 
   app.disable("x-powered-by");
   app.use(helmet());
-  app.use(cors());
+  app.use(cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    credentials: true,
+  }));
   app.use(express.json({
     verify: (req: any, _res, buf) => {
       req.rawBody = buf;
@@ -126,9 +131,32 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
     app.use("/api/v1/environments/:envId/analytics", createAnalyticsRoutes(deps.analyticsController));
   }
 
+  if (deps.eventController) {
+    app.use("/api/v1/environments/:envId/events", createEventsRoutes(deps.eventController));
+  }
+
   if (deps.replayController) {
     app.use("/api/v1/environments/:envId", createReplayRoutes(deps.replayController));
   }
+
+  // MVP Global Environments fetch for the frontend
+  // The frontend currently fetches /api/v1/environments instead of nesting by project.
+  const { requireAuth } = require("./presentation/http/middlewares/requireAuth");
+  const { getPrismaClient } = require("@relayhub/database");
+  app.get("/api/v1/environments", requireAuth, async (req: any, res: any) => {
+    try {
+      const prisma = getPrismaClient();
+      // Find all environments where the user is a member of the parent organization
+      const memberships = await prisma.membership.findMany({ where: { userId: req.userId } });
+      const orgIds = memberships.map((m: any) => m.organizationId);
+      const projects = await prisma.project.findMany({ where: { organizationId: { in: orgIds } } });
+      const projectIds = projects.map((p: any) => p.id);
+      const environments = await prisma.environment.findMany({ where: { projectId: { in: projectIds } } });
+      res.status(200).json(environments);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch environments" });
+    }
+  });
 
   app.get("/healthz", (_req: Request, res: Response) => {
     const body: HealthCheckResponse = {
