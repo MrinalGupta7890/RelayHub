@@ -11,9 +11,10 @@ export class BullMqQueueService implements QueueService {
       connection: this.redisConnection,
       defaultJobOptions: {
         removeOnComplete: true,
-        removeOnFail: false, // Keep failed fanout jobs for inspection
+        removeOnFail: false,
       },
     });
+
     this.deliveryQueue = new Queue("delivery.retry", {
       connection: this.redisConnection,
       defaultJobOptions: {
@@ -28,7 +29,7 @@ export class BullMqQueueService implements QueueService {
       "fanout",
       { eventId },
       {
-        jobId: `fanout:${eventId}`, // Idempotent queuing
+        jobId: `fanout:${eventId}`,
       }
     );
   }
