@@ -19,6 +19,8 @@ import { createSourceRoutes } from "./presentation/http/routes/sources.routes";
 import { SourceController } from "./presentation/http/controllers/SourceController";
 import { createDestinationRoutes } from "./presentation/http/routes/destinations.routes";
 import { DestinationController } from "./presentation/http/controllers/DestinationController";
+import { createIngestionRoutes } from "./presentation/http/routes/ingest.routes";
+import { IngestionController } from "./presentation/http/controllers/IngestionController";
 const SERVICE_NAME = "relayhub-api";
 const SERVICE_VERSION = "0.1.0";
 const startedAt = Date.now();
@@ -33,6 +35,7 @@ export interface AppDependencies {
   apiKeyController?: ApiKeyController;
   sourceController?: SourceController;
   destinationController?: DestinationController;
+  ingestionController?: IngestionController;
 }
 
 const defaultDeps: AppDependencies = {
@@ -53,7 +56,11 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    }
+  }));
   app.use(cookieParser());
   app.use(pinoHttp({ logger }));
 
@@ -84,6 +91,10 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
 
   if (deps.destinationController) {
     app.use("/api/v1/environments/:envId/destinations", createDestinationRoutes(deps.destinationController));
+  }
+
+  if (deps.ingestionController) {
+    app.use("/ingest", createIngestionRoutes(deps.ingestionController));
   }
 
   app.get("/healthz", (_req: Request, res: Response) => {

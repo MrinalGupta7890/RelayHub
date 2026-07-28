@@ -36,12 +36,19 @@ import { ListDestinationsUseCase } from "./application/use-cases/destinations/Li
 import { UpdateDestinationUseCase } from "./application/use-cases/destinations/UpdateDestinationUseCase";
 import { DestinationController } from "./presentation/http/controllers/DestinationController";
 
+import { IngestEventUseCase } from "./application/use-cases/ingestion/IngestEventUseCase";
+import { IngestionController } from "./presentation/http/controllers/IngestionController";
+import { BullMqQueueService } from "./infrastructure/queue/bullmq/BullMqQueueService";
+import Redis from "ioredis";
+
 import { AesEncryptionService } from "./infrastructure/crypto/AesEncryptionService";
-import { PrismaSourceRepository, PrismaDestinationRepository } from "@relayhub/database";
+import { PrismaSourceRepository, PrismaDestinationRepository, PrismaEventRepository } from "@relayhub/database";
 
 const env = loadApiEnv();
 const logger = createLogger(env);
 const prisma = getPrismaClient({ logQueries: env.NODE_ENV === "development" });
+const redis = new Redis(env.REDIS_URL);
+const queueService = new BullMqQueueService(redis);
 
 import { PrismaOrganizationRepository, PrismaProjectRepository, PrismaMembershipRepository, PrismaAuditLogRepository, PrismaEnvironmentRepository, PrismaApiKeyRepository } from "@relayhub/database";
 
@@ -59,6 +66,7 @@ const environmentRepository = new PrismaEnvironmentRepository(prisma);
 const apiKeyRepository = new PrismaApiKeyRepository(prisma);
 const sourceRepository = new PrismaSourceRepository(prisma);
 const destinationRepository = new PrismaDestinationRepository(prisma);
+const eventRepository = new PrismaEventRepository(prisma);
 
 const registerUseCase = new RegisterUserUseCase(userRepository, passwordHasher);
 const loginUseCase = new LoginUserUseCase(userRepository, sessionRepository, passwordHasher, tokenService);
@@ -91,6 +99,9 @@ const listDestinationsUseCase = new ListDestinationsUseCase(destinationRepositor
 const updateDestinationUseCase = new UpdateDestinationUseCase(destinationRepository);
 const destinationController = new DestinationController(createDestinationUseCase, listDestinationsUseCase, updateDestinationUseCase);
 
+const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService);
+const ingestionController = new IngestionController(ingestEventUseCase);
+
 const app = createApp(logger, {
   checkDatabase: () => checkDatabaseConnection(prisma),
   authController,
@@ -100,6 +111,7 @@ const app = createApp(logger, {
   apiKeyController,
   sourceController,
   destinationController,
+  ingestionController,
 });
 
 const server = app.listen(env.API_PORT, () => {

@@ -14,7 +14,9 @@
     "@relayhub/domain": "workspace:*",
     "@relayhub/shared-config": "workspace:*",
     "@relayhub/shared-types": "workspace:*",
+    "bullmq": "^5.81.2",
     "express": "^4.19.2",
+    "ioredis": "^5.11.1",
     "pino": "^9.3.2",
     "pino-http": "^10.2.0",
     "zod": "^3.23.8"
