@@ -21,6 +21,8 @@ import { createDestinationRoutes } from "./presentation/http/routes/destinations
 import { DestinationController } from "./presentation/http/controllers/DestinationController";
 import { createIngestionRoutes } from "./presentation/http/routes/ingest.routes";
 import { IngestionController } from "./presentation/http/controllers/IngestionController";
+import { createAnalyticsRoutes } from "./presentation/http/routes/analytics.routes";
+import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
 const SERVICE_NAME = "relayhub-api";
 const SERVICE_VERSION = "0.1.0";
 const startedAt = Date.now();
@@ -36,6 +38,7 @@ export interface AppDependencies {
   sourceController?: SourceController;
   destinationController?: DestinationController;
   ingestionController?: IngestionController;
+  analyticsController?: AnalyticsController;
 }
 
 const defaultDeps: AppDependencies = {
@@ -95,6 +98,10 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
 
   if (deps.ingestionController) {
     app.use("/ingest", createIngestionRoutes(deps.ingestionController));
+  }
+
+  if (deps.analyticsController) {
+    app.use("/api/v1/environments/:envId/analytics", createAnalyticsRoutes(deps.analyticsController));
   }
 
   app.get("/healthz", (_req: Request, res: Response) => {

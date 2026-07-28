@@ -42,7 +42,11 @@ import { BullMqQueueService } from "./infrastructure/queue/bullmq/BullMqQueueSer
 import Redis from "ioredis";
 
 import { AesEncryptionService } from "./infrastructure/crypto/AesEncryptionService";
-import { PrismaSourceRepository, PrismaDestinationRepository, PrismaEventRepository } from "@relayhub/database";
+import { PrismaSourceRepository, PrismaDestinationRepository, PrismaEventRepository, PrismaDeliveryAttemptRepository } from "@relayhub/database";
+import { GetSourceEventsUseCase } from "./application/use-cases/analytics/GetSourceEventsUseCase";
+import { GetEventAttemptsUseCase } from "./application/use-cases/analytics/GetEventAttemptsUseCase";
+import { GetDestinationAttemptsUseCase } from "./application/use-cases/analytics/GetDestinationAttemptsUseCase";
+import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
 
 const env = loadApiEnv();
 const logger = createLogger(env);
@@ -102,6 +106,12 @@ const destinationController = new DestinationController(createDestinationUseCase
 const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService);
 const ingestionController = new IngestionController(ingestEventUseCase);
 
+const deliveryAttemptRepository = new PrismaDeliveryAttemptRepository(prisma);
+const getSourceEventsUseCase = new GetSourceEventsUseCase(sourceRepository, eventRepository);
+const getEventAttemptsUseCase = new GetEventAttemptsUseCase(eventRepository, sourceRepository, deliveryAttemptRepository);
+const getDestinationAttemptsUseCase = new GetDestinationAttemptsUseCase(destinationRepository, deliveryAttemptRepository);
+const analyticsController = new AnalyticsController(getSourceEventsUseCase, getEventAttemptsUseCase, getDestinationAttemptsUseCase);
+
 const app = createApp(logger, {
   checkDatabase: () => checkDatabaseConnection(prisma),
   authController,
@@ -112,6 +122,7 @@ const app = createApp(logger, {
   sourceController,
   destinationController,
   ingestionController,
+  analyticsController,
 });
 
 const server = app.listen(env.API_PORT, () => {
