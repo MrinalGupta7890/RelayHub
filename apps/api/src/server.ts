@@ -1,6 +1,7 @@
 import { getPrismaClient, disconnectPrisma, checkDatabaseConnection, PrismaUserRepository, PrismaSessionRepository } from "@relayhub/database";
 
 import { loadApiEnv } from "./config/env";
+import "./instrumentation";
 import { createLogger } from "./logger";
 import { createApp } from "./app";
 import { Argon2PasswordHasher } from "./infrastructure/auth/Argon2PasswordHasher";
@@ -113,7 +114,10 @@ const listDestinationsUseCase = new ListDestinationsUseCase(destinationRepositor
 const updateDestinationUseCase = new UpdateDestinationUseCase(destinationRepository, auditLogRepository);
 const destinationController = new DestinationController(createDestinationUseCase, listDestinationsUseCase, updateDestinationUseCase);
 
-const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService, wsEmitterService);
+import { PrometheusMetricsService } from "./infrastructure/observability/PrometheusMetricsService";
+const metricsService = new PrometheusMetricsService();
+
+const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService, wsEmitterService, metricsService);
 const ingestionController = new IngestionController(ingestEventUseCase);
 
 const deliveryAttemptRepository = new PrismaDeliveryAttemptRepository(prisma);

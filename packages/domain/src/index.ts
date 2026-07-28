@@ -6,3 +6,4 @@ export * from "./services/EventTypeMatcher";
 export * from "./services/SignatureGenerator";
 export * from "./services/BackoffCalculator";
 export * from "./ports/HttpDeliveryService";
+export * from "./ports/MetricsService";

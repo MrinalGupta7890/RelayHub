@@ -1,3 +1,4 @@
+import "./instrumentation";
 import { loadWorkerEnv } from "./config/env";
 import { createLogger } from "./logger";
 import { createHealthServer } from "./health-server";
@@ -41,6 +42,9 @@ const eventFanoutUseCase = new EventFanoutUseCase(
   queueService
 );
 
+import { PrometheusMetricsService } from "./infrastructure/observability/PrometheusMetricsService";
+const metricsService = new PrometheusMetricsService();
+
 const executeDeliveryUseCase = new ExecuteDeliveryUseCase(
   deliveryAttemptRepository,
   eventRepository,
@@ -49,6 +53,7 @@ const executeDeliveryUseCase = new ExecuteDeliveryUseCase(
   queueService,
   encryptionService,
   wsEmitterService,
+  metricsService,
   logger
 );
 

@@ -8,6 +8,7 @@ import {
   QueueService,
   BackoffCalculator,
   WsEmitterService,
+  MetricsService,
 } from "@relayhub/domain";
 import { AesEncryptionService } from "../../../infrastructure/crypto/AesEncryptionService";
 import { Logger } from "pino";
@@ -21,6 +22,7 @@ export class ExecuteDeliveryUseCase {
     private readonly queueService: QueueService,
     private readonly encryptionService: AesEncryptionService,
     private readonly wsEmitterService: WsEmitterService,
+    private readonly metricsService: MetricsService,
     private readonly logger: Logger
   ) {}
 
@@ -92,6 +94,11 @@ export class ExecuteDeliveryUseCase {
       durationMs: result.durationMs,
       completedAt: new Date(),
     });
+
+    this.metricsService.incrementDeliveryAttempt(finalStatus, attempt.destinationId);
+    if (result.durationMs) {
+      this.metricsService.recordDeliveryLatency(result.durationMs, attempt.destinationId);
+    }
 
     // Emit real-time event for the delivery update
     await this.wsEmitterService.emitDeliveryUpdated(

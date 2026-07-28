@@ -27,6 +27,10 @@ import { createReplayRoutes } from "./presentation/http/routes/replay.routes";
 import { ReplayController } from "./presentation/http/controllers/ReplayController";
 import { createAuditLogRoutes } from "./presentation/http/routes/audit-logs.routes";
 import { AuditLogController } from "./presentation/http/controllers/AuditLogController";
+import { register, collectDefaultMetrics } from "prom-client";
+
+// Start collecting default Node metrics
+collectDefaultMetrics();
 const SERVICE_NAME = "relayhub-api";
 const SERVICE_VERSION = "0.1.0";
 const startedAt = Date.now();
@@ -142,6 +146,15 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
     }
 
     res.status(200).json({ status: "ok", checks: { database: "up" } });
+  });
+
+  app.get("/metrics", async (_req, res) => {
+    try {
+      res.set("Content-Type", register.contentType);
+      res.end(await register.metrics());
+    } catch (ex) {
+      res.status(500).end(String(ex));
+    }
   });
 
   return app;

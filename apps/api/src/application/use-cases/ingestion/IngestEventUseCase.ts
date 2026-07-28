@@ -1,4 +1,4 @@
-import { EventRepository, SourceRepository, QueueService, SignatureVerifier, WsEmitterService } from "@relayhub/domain";
+import { EventRepository, SourceRepository, QueueService, SignatureVerifier, WsEmitterService, MetricsService } from "@relayhub/domain";
 import { EncryptionService } from "../../ports/EncryptionService";
 import crypto from "crypto";
 
@@ -22,7 +22,8 @@ export class IngestEventUseCase {
     private readonly eventRepository: EventRepository,
     private readonly queueService: QueueService,
     private readonly encryptionService: EncryptionService,
-    private readonly wsEmitterService: WsEmitterService
+    private readonly wsEmitterService: WsEmitterService,
+    private readonly metricsService: MetricsService
   ) {}
 
   async execute(input: IngestEventInput): Promise<IngestEventResult> {
@@ -72,6 +73,8 @@ export class IngestEventUseCase {
         // Log but do not fail ingestion
         console.error("Failed to emit real-time event:", err);
       });
+
+      this.metricsService.incrementEventsIngested(source.environmentId);
 
       return {
         status: "accepted",

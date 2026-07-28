@@ -2,6 +2,10 @@ import express, { type Express, type Request, type Response } from "express";
 import pinoHttp from "pino-http";
 import type { Logger } from "pino";
 import type { HealthCheckResponse } from "@relayhub/shared-types";
+import { register, collectDefaultMetrics } from "prom-client";
+
+// Start collecting default Node metrics
+collectDefaultMetrics();
 
 const SERVICE_NAME = "relayhub-worker";
 const SERVICE_VERSION = "0.1.0";
@@ -36,6 +40,15 @@ export function createHealthServer(logger: Logger, deps: HealthServerDependencie
       timestamp: new Date().toISOString(),
     };
     res.status(200).json(body);
+  });
+
+  app.get("/metrics", async (_req, res) => {
+    try {
+      res.set("Content-Type", register.contentType);
+      res.end(await register.metrics());
+    } catch (ex) {
+      res.status(500).end(String(ex));
+    }
   });
 
   // Redis joins this check in Phase 7 once the worker actually depends on
