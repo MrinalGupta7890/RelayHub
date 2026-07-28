@@ -49,6 +49,8 @@ import { GetDestinationAttemptsUseCase } from "./application/use-cases/analytics
 import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
 import { ReplayEventUseCase } from "./application/use-cases/replay/ReplayEventUseCase";
 import { ReplayController } from "./presentation/http/controllers/ReplayController";
+import { ListAuditLogsUseCase } from "./application/use-cases/audit-logs/ListAuditLogsUseCase";
+import { AuditLogController } from "./presentation/http/controllers/AuditLogController";
 
 import http from "http";
 import { RedisWsEmitter } from "./infrastructure/websocket/RedisWsEmitter";
@@ -102,13 +104,13 @@ const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository, auditLogRepository);
 const apiKeyController = new ApiKeyController(createApiKeyUseCase, listApiKeysUseCase, revokeApiKeyUseCase);
 
-const createSourceUseCase = new CreateSourceUseCase(sourceRepository, encryptionService);
+const createSourceUseCase = new CreateSourceUseCase(sourceRepository, encryptionService, auditLogRepository);
 const listSourcesUseCase = new ListSourcesUseCase(sourceRepository);
 const sourceController = new SourceController(createSourceUseCase, listSourcesUseCase);
 
-const createDestinationUseCase = new CreateDestinationUseCase(destinationRepository, encryptionService);
+const createDestinationUseCase = new CreateDestinationUseCase(destinationRepository, encryptionService, auditLogRepository);
 const listDestinationsUseCase = new ListDestinationsUseCase(destinationRepository);
-const updateDestinationUseCase = new UpdateDestinationUseCase(destinationRepository);
+const updateDestinationUseCase = new UpdateDestinationUseCase(destinationRepository, auditLogRepository);
 const destinationController = new DestinationController(createDestinationUseCase, listDestinationsUseCase, updateDestinationUseCase);
 
 const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService, wsEmitterService);
@@ -123,6 +125,9 @@ const analyticsController = new AnalyticsController(getSourceEventsUseCase, getE
 const replayEventUseCase = new ReplayEventUseCase(eventRepository, sourceRepository, destinationRepository, queueService);
 const replayController = new ReplayController(replayEventUseCase);
 
+const listAuditLogsUseCase = new ListAuditLogsUseCase(auditLogRepository);
+const auditLogController = new AuditLogController(listAuditLogsUseCase);
+
 const app = createApp(logger, {
   checkDatabase: () => checkDatabaseConnection(prisma),
   authController,
@@ -135,6 +140,7 @@ const app = createApp(logger, {
   ingestionController,
   analyticsController,
   replayController,
+  auditLogController,
 });
 
 const httpServer = http.createServer(app);

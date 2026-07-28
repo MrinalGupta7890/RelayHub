@@ -39,14 +39,19 @@ export class DestinationController {
   create = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const envId = req.params.envId;
-      if (!envId) {
-        return res.status(400).json({ error: "envId parameter is required" });
+      const organizationId = req.params.orgId;
+      const userId = req.userId;
+
+      if (!envId || !organizationId || !userId) {
+        return res.status(400).json({ error: "Missing required parameters" });
       }
 
       const parsed = createDestinationSchema.parse(req.body);
 
       const result = await this.createUseCase.execute({
         environmentId: envId,
+        organizationId,
+        userId,
         ...parsed,
       });
 
@@ -97,14 +102,19 @@ export class DestinationController {
   update = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const destinationId = req.params.destinationId;
-      if (!destinationId) {
-        return res.status(400).json({ error: "destinationId parameter is required" });
+      const organizationId = req.params.orgId;
+      const userId = req.userId;
+
+      if (!destinationId || !organizationId || !userId) {
+        return res.status(400).json({ error: "Missing required parameters" });
       }
 
       const parsed = updateDestinationSchema.parse(req.body);
 
       const destination = await this.updateUseCase.execute({
         id: destinationId,
+        organizationId,
+        userId,
         ...parsed,
       });
 

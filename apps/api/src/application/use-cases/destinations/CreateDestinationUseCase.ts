@@ -1,9 +1,11 @@
-import { DestinationRepository, Destination, EnvironmentId, RetryPolicy } from "@relayhub/domain";
+import { DestinationRepository, Destination, EnvironmentId, RetryPolicy, AuditLogRepository, OrganizationId, UserId } from "@relayhub/domain";
 import { EncryptionService } from "../../ports/EncryptionService";
 import crypto from "crypto";
 
 export type CreateDestinationInput = {
   environmentId: EnvironmentId;
+  organizationId: OrganizationId;
+  userId: UserId;
   name: string;
   url: string;
   secret?: string | undefined;
@@ -26,7 +28,8 @@ const DEFAULT_RETRY_POLICY: RetryPolicy = {
 export class CreateDestinationUseCase {
   constructor(
     private readonly destinationRepository: DestinationRepository,
-    private readonly encryptionService: EncryptionService
+    private readonly encryptionService: EncryptionService,
+    private readonly auditRepo: AuditLogRepository
   ) {}
 
   async execute(input: CreateDestinationInput): Promise<CreateDestinationResult> {
@@ -42,6 +45,13 @@ export class CreateDestinationUseCase {
       eventTypeFilters: input.eventTypeFilters,
       customHeaders: input.customHeaders || null,
       retryPolicy: input.retryPolicy || DEFAULT_RETRY_POLICY,
+    });
+
+    await this.auditRepo.create({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      action: "destination.created",
+      metadata: { destinationId: destination.id, environmentId: input.environmentId, url: input.url },
     });
 
     return {

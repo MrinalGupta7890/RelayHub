@@ -1,9 +1,11 @@
-import { SourceRepository, Source, VerificationType, EnvironmentId } from "@relayhub/domain";
+import { SourceRepository, Source, VerificationType, EnvironmentId, AuditLogRepository, OrganizationId, UserId } from "@relayhub/domain";
 import { EncryptionService } from "../../ports/EncryptionService";
 import crypto from "crypto";
 
 export type CreateSourceInput = {
   environmentId: EnvironmentId;
+  organizationId: OrganizationId;
+  userId: UserId;
   name: string;
   verificationType: VerificationType;
 };
@@ -16,7 +18,8 @@ export type CreateSourceResult = {
 export class CreateSourceUseCase {
   constructor(
     private readonly sourceRepository: SourceRepository,
-    private readonly encryptionService: EncryptionService
+    private readonly encryptionService: EncryptionService,
+    private readonly auditRepo: AuditLogRepository
   ) {}
 
   async execute(input: CreateSourceInput): Promise<CreateSourceResult> {
@@ -38,6 +41,13 @@ export class CreateSourceUseCase {
       verificationType: input.verificationType,
       secretEncrypted,
       ingestionSlug,
+    });
+
+    await this.auditRepo.create({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      action: "source.created",
+      metadata: { sourceId: source.id, environmentId: input.environmentId },
     });
 
     return {

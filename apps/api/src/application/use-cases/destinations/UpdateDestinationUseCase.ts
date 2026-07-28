@@ -1,7 +1,9 @@
-import { DestinationRepository, Destination, DestinationId, RetryPolicy } from "@relayhub/domain";
+import { DestinationRepository, Destination, DestinationId, RetryPolicy, AuditLogRepository, OrganizationId, UserId } from "@relayhub/domain";
 
 export type UpdateDestinationInput = {
   id: DestinationId;
+  organizationId: OrganizationId;
+  userId: UserId;
   name?: string | undefined;
   url?: string | undefined;
   eventTypeFilters?: string[] | undefined;
@@ -11,7 +13,10 @@ export type UpdateDestinationInput = {
 };
 
 export class UpdateDestinationUseCase {
-  constructor(private readonly destinationRepository: DestinationRepository) {}
+  constructor(
+    private readonly destinationRepository: DestinationRepository,
+    private readonly auditRepo: AuditLogRepository
+  ) {}
 
   async execute(input: UpdateDestinationInput): Promise<Destination> {
     const existing = await this.destinationRepository.findById(input.id);
@@ -28,6 +33,15 @@ export class UpdateDestinationUseCase {
       ...(input.isActive !== undefined && { isActive: input.isActive }),
     };
 
-    return this.destinationRepository.update(input.id, changes);
+    const updated = await this.destinationRepository.update(input.id, changes);
+
+    await this.auditRepo.create({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      action: "destination.updated",
+      metadata: { destinationId: updated.id, changes: Object.keys(changes) },
+    });
+
+    return updated;
   }
 }

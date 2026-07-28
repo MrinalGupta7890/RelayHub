@@ -18,15 +18,20 @@ export class SourceController {
 
   create = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const envId = req.params.envId;
-      if (!envId) {
-        return res.status(400).json({ error: "envId parameter is required" });
+      const environmentId = req.params.envId;
+      const organizationId = req.params.orgId;
+      const userId = req.userId;
+
+      if (!environmentId || !organizationId || !userId) {
+        return res.status(400).json({ error: "Missing required parameters" });
       }
 
       const parsed = createSourceSchema.parse(req.body);
 
       const result = await this.createSourceUseCase.execute({
-        environmentId: envId,
+        environmentId,
+        organizationId,
+        userId,
         name: parsed.name,
         verificationType: parsed.verificationType,
       });

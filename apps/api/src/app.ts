@@ -25,6 +25,8 @@ import { createAnalyticsRoutes } from "./presentation/http/routes/analytics.rout
 import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
 import { createReplayRoutes } from "./presentation/http/routes/replay.routes";
 import { ReplayController } from "./presentation/http/controllers/ReplayController";
+import { createAuditLogRoutes } from "./presentation/http/routes/audit-logs.routes";
+import { AuditLogController } from "./presentation/http/controllers/AuditLogController";
 const SERVICE_NAME = "relayhub-api";
 const SERVICE_VERSION = "0.1.0";
 const startedAt = Date.now();
@@ -42,6 +44,7 @@ export interface AppDependencies {
   ingestionController?: IngestionController;
   analyticsController?: AnalyticsController;
   replayController?: ReplayController;
+  auditLogController?: AuditLogController;
 }
 
 const defaultDeps: AppDependencies = {
@@ -76,6 +79,10 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
   
   if (deps.organizationController) {
     app.use("/api/v1/organizations", createOrganizationRoutes(deps.organizationController));
+  }
+
+  if (deps.auditLogController) {
+    app.use("/api/v1/organizations", createAuditLogRoutes(deps.auditLogController));
   }
 
   // The project routes expect /api/v1/organizations/:orgId/projects 
