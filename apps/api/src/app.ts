@@ -7,6 +7,10 @@ import type { HealthCheckResponse } from "@relayhub/shared-types";
 import cookieParser from "cookie-parser";
 import { createAuthRoutes } from "./presentation/http/routes/auth.routes";
 import { AuthController } from "./presentation/http/controllers/AuthController";
+import { createOrganizationRoutes } from "./presentation/http/routes/organizations.routes";
+import { OrganizationController } from "./presentation/http/controllers/OrganizationController";
+import { createProjectRoutes } from "./presentation/http/routes/projects.routes";
+import { ProjectController } from "./presentation/http/controllers/ProjectController";
 
 const SERVICE_NAME = "relayhub-api";
 const SERVICE_VERSION = "0.1.0";
@@ -16,6 +20,8 @@ export interface AppDependencies {
   /** Injected so tests can simulate DB-down without a real Postgres instance. */
   checkDatabase: () => Promise<boolean>;
   authController?: AuthController;
+  organizationController?: OrganizationController;
+  projectController?: ProjectController;
 }
 
 const defaultDeps: AppDependencies = {
@@ -42,6 +48,15 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
 
   if (deps.authController) {
     app.use("/api/v1/auth", createAuthRoutes(deps.authController));
+  }
+  
+  if (deps.organizationController) {
+    app.use("/api/v1/organizations", createOrganizationRoutes(deps.organizationController));
+  }
+
+  // The project routes expect /api/v1/organizations/:orgId/projects 
+  if (deps.projectController) {
+    app.use("/api/v1/organizations/:orgId/projects", createProjectRoutes(deps.projectController));
   }
 
   app.get("/healthz", (_req: Request, res: Response) => {
