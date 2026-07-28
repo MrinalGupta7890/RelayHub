@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { CreateProjectUseCase } from "../../../application/use-cases/projects/CreateProjectUseCase";
 import { ListProjectsUseCase } from "../../../application/use-cases/projects/ListProjectsUseCase";
 import { AuthenticatedRequest } from "../middlewares/requireAuth";

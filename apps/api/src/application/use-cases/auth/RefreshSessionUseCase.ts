@@ -31,7 +31,7 @@ export class RefreshSessionUseCase {
     }
 
     // Issue new tokens
-    const accessToken = await this.tokenService.generateAccessToken(input.userId);
+    const accessToken = await this.tokenService.generateAccessToken(session.userId);
     const newRefreshToken = this.tokenService.generateRefreshToken();
     const newRefreshTokenHash = crypto.createHash("sha256").update(newRefreshToken).digest("hex");
 
@@ -41,7 +41,7 @@ export class RefreshSessionUseCase {
     // Delete old session and create new one (token rotation)
     await this.sessionRepository.delete(session.id);
     await this.sessionRepository.create({
-      userId: input.userId,
+      userId: session.userId,
       refreshTokenHash: newRefreshTokenHash,
       expiresAt,
     });

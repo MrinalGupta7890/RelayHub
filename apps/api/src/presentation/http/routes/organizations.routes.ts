@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { OrganizationController } from "../controllers/OrganizationController";
 import { requireAuth } from "../middlewares/requireAuth";
-import { requireRole } from "../middlewares/requireRole";
 
 export function createOrganizationRoutes(orgController: OrganizationController): Router {
   const router = Router();

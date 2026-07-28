@@ -18,11 +18,20 @@ import { CreateProjectUseCase } from "./application/use-cases/projects/CreatePro
 import { ListProjectsUseCase } from "./application/use-cases/projects/ListProjectsUseCase";
 import { ProjectController } from "./presentation/http/controllers/ProjectController";
 
+import { CreateEnvironmentUseCase } from "./application/use-cases/environments/CreateEnvironmentUseCase";
+import { ListEnvironmentsUseCase } from "./application/use-cases/environments/ListEnvironmentsUseCase";
+import { EnvironmentController } from "./presentation/http/controllers/EnvironmentController";
+
+import { CreateApiKeyUseCase } from "./application/use-cases/api-keys/CreateApiKeyUseCase";
+import { ListApiKeysUseCase } from "./application/use-cases/api-keys/ListApiKeysUseCase";
+import { RevokeApiKeyUseCase } from "./application/use-cases/api-keys/RevokeApiKeyUseCase";
+import { ApiKeyController } from "./presentation/http/controllers/ApiKeyController";
+
 const env = loadApiEnv();
 const logger = createLogger(env);
 const prisma = getPrismaClient({ logQueries: env.NODE_ENV === "development" });
 
-import { PrismaOrganizationRepository, PrismaProjectRepository, PrismaMembershipRepository, PrismaAuditLogRepository } from "@relayhub/database";
+import { PrismaOrganizationRepository, PrismaProjectRepository, PrismaMembershipRepository, PrismaAuditLogRepository, PrismaEnvironmentRepository, PrismaApiKeyRepository } from "@relayhub/database";
 
 const userRepository = new PrismaUserRepository(prisma);
 const sessionRepository = new PrismaSessionRepository(prisma);
@@ -33,6 +42,8 @@ const organizationRepository = new PrismaOrganizationRepository(prisma);
 const projectRepository = new PrismaProjectRepository(prisma);
 const membershipRepository = new PrismaMembershipRepository(prisma);
 const auditLogRepository = new PrismaAuditLogRepository(prisma);
+const environmentRepository = new PrismaEnvironmentRepository(prisma);
+const apiKeyRepository = new PrismaApiKeyRepository(prisma);
 
 const registerUseCase = new RegisterUserUseCase(userRepository, passwordHasher);
 const loginUseCase = new LoginUserUseCase(userRepository, sessionRepository, passwordHasher, tokenService);
@@ -47,11 +58,22 @@ const createProjectUseCase = new CreateProjectUseCase(projectRepository, auditLo
 const listProjectsUseCase = new ListProjectsUseCase(projectRepository);
 const projectController = new ProjectController(createProjectUseCase, listProjectsUseCase);
 
+const createEnvironmentUseCase = new CreateEnvironmentUseCase(environmentRepository, auditLogRepository);
+const listEnvironmentsUseCase = new ListEnvironmentsUseCase(environmentRepository);
+const environmentController = new EnvironmentController(createEnvironmentUseCase, listEnvironmentsUseCase);
+
+const createApiKeyUseCase = new CreateApiKeyUseCase(apiKeyRepository, environmentRepository, passwordHasher, auditLogRepository);
+const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
+const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository, auditLogRepository);
+const apiKeyController = new ApiKeyController(createApiKeyUseCase, listApiKeysUseCase, revokeApiKeyUseCase);
+
 const app = createApp(logger, {
   checkDatabase: () => checkDatabaseConnection(prisma),
   authController,
   organizationController,
   projectController,
+  environmentController,
+  apiKeyController,
 });
 
 const server = app.listen(env.API_PORT, () => {

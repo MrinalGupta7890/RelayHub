@@ -65,9 +65,13 @@ export class PrismaDestinationRepository implements DestinationRepository {
   }): Promise<Destination> {
     const record = await this.prisma.destination.create({
       data: {
-        ...input,
-        customHeaders: input.customHeaders as Prisma.InputJsonValue | undefined,
+        environmentId: input.environmentId,
+        name: input.name,
+        url: input.url,
+        secretEncrypted: input.secretEncrypted,
+        ...(input.customHeaders !== undefined && { customHeaders: input.customHeaders as Prisma.InputJsonValue }),
         retryPolicy: input.retryPolicy as unknown as Prisma.InputJsonValue,
+        eventTypeFilters: input.eventTypeFilters,
       },
     });
     return cast<Destination>(record);

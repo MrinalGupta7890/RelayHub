@@ -12,7 +12,12 @@ export class PrismaAuditLogRepository implements AuditLogRepository {
     metadata: Record<string, unknown> | null;
   }): Promise<AuditLogEntry> {
     const record = await this.prisma.auditLogEntry.create({
-      data: { ...input, metadata: input.metadata as Prisma.InputJsonValue | undefined },
+      data: {
+        organizationId: input.organizationId,
+        userId: input.userId,
+        action: input.action,
+        ...(input.metadata !== undefined && { metadata: input.metadata as Prisma.InputJsonValue }),
+      },
     });
     return cast<AuditLogEntry>(record);
   }

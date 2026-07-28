@@ -14,9 +14,12 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   }
 
   const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Missing token" });
+  }
 
   try {
-    const payload = jwt.verify(token, config.JWT_SECRET) as { sub: string };
+    const payload = jwt.verify(token, String(config.JWT_SECRET)) as { sub: string };
     req.userId = payload.sub;
     next();
   } catch (err) {

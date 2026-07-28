@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { CreateOrganizationUseCase } from "../../../application/use-cases/organizations/CreateOrganizationUseCase";
 import { ListOrganizationsUseCase } from "../../../application/use-cases/organizations/ListOrganizationsUseCase";
 import { AuthenticatedRequest } from "../middlewares/requireAuth";

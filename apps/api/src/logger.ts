@@ -10,9 +10,11 @@ import type { ApiEnv } from "./config/env";
 export function createLogger(env: ApiEnv) {
   return pino({
     level: env.LOG_LEVEL,
-    transport:
-      env.NODE_ENV === "development"
-        ? { target: "pino-pretty", options: { colorize: true, translateTime: "HH:MM:ss" } }
-        : undefined,
+    transport: env.NODE_ENV === "development"
+      ? {
+          target: "pino-pretty",
+          options: { colorize: true, translateTime: "SYS:standard" },
+        }
+      : { target: "pino/file", options: { destination: 1 } },
   });
 }

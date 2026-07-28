@@ -1,4 +1,4 @@
-import { OrganizationRepository, MembershipRepository, AuditLogRepository, Organization, UserId } from "@relayhub/domain";
+import { OrganizationRepository, MembershipRepository, AuditLogRepository, Organization, UserId, Role } from "@relayhub/domain";
 
 export type CreateOrganizationInput = {
   name: string;
@@ -31,7 +31,7 @@ export class CreateOrganizationUseCase {
       await this.membershipRepo.create({
         userId: input.userId,
         organizationId: organization.id,
-        role: "OWNER", // Note: The domain enum Role maps to "OWNER"
+        role: Role.OWNER, 
       });
 
       // 3. Log Audit event
