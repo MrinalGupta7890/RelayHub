@@ -1,4 +1,5 @@
 import { getPrismaClient, disconnectPrisma, checkDatabaseConnection, PrismaUserRepository, PrismaSessionRepository } from "@relayhub/database";
+
 import { loadApiEnv } from "./config/env";
 import { createLogger } from "./logger";
 import { createApp } from "./app";

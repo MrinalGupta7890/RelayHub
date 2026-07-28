@@ -20,6 +20,12 @@ const apiEnvSchema = baseEnvSchema.extend({
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 
+import { config as loadDotenv } from "dotenv";
+import path from "path";
+loadDotenv({ path: path.resolve(__dirname, "../../../../.env") });
+
 export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   return parseEnv(apiEnvSchema, source);
 }
+
+export const config = loadApiEnv();
