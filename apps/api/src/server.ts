@@ -120,6 +120,11 @@ const metricsService = new PrometheusMetricsService();
 const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService, wsEmitterService, metricsService);
 const ingestionController = new IngestionController(ingestEventUseCase);
 
+import { SimulateEventUseCase } from "./application/use-cases/simulation/SimulateEventUseCase";
+import { SimulationController } from "./presentation/http/controllers/SimulationController";
+const simulateEventUseCase = new SimulateEventUseCase(sourceRepository, eventRepository, queueService, wsEmitterService, metricsService);
+const simulationController = new SimulationController(simulateEventUseCase);
+
 const deliveryAttemptRepository = new PrismaDeliveryAttemptRepository(prisma);
 const getSourceEventsUseCase = new GetSourceEventsUseCase(sourceRepository, eventRepository);
 const getEventAttemptsUseCase = new GetEventAttemptsUseCase(eventRepository, sourceRepository, deliveryAttemptRepository);
@@ -142,6 +147,7 @@ const app = createApp(logger, {
   sourceController,
   destinationController,
   ingestionController,
+  simulationController,
   analyticsController,
   replayController,
   auditLogController,

@@ -21,6 +21,8 @@ import { createDestinationRoutes } from "./presentation/http/routes/destinations
 import { DestinationController } from "./presentation/http/controllers/DestinationController";
 import { createIngestionRoutes } from "./presentation/http/routes/ingest.routes";
 import { IngestionController } from "./presentation/http/controllers/IngestionController";
+import { createSimulationRoutes } from "./presentation/http/routes/simulation.routes";
+import { SimulationController } from "./presentation/http/controllers/SimulationController";
 import { createAnalyticsRoutes } from "./presentation/http/routes/analytics.routes";
 import { AnalyticsController } from "./presentation/http/controllers/AnalyticsController";
 import { createReplayRoutes } from "./presentation/http/routes/replay.routes";
@@ -47,6 +49,7 @@ export interface AppDependencies {
   sourceController?: SourceController;
   destinationController?: DestinationController;
   ingestionController?: IngestionController;
+  simulationController?: SimulationController;
   analyticsController?: AnalyticsController;
   replayController?: ReplayController;
   auditLogController?: AuditLogController;
@@ -113,6 +116,10 @@ export function createApp(logger: Logger, deps: AppDependencies = defaultDeps): 
 
   if (deps.ingestionController) {
     app.use("/ingest", ingestLimiter, createIngestionRoutes(deps.ingestionController));
+  }
+
+  if (deps.simulationController) {
+    app.use("/api/v1/environments/:envId/simulate", createSimulationRoutes(deps.simulationController));
   }
 
   if (deps.analyticsController) {
