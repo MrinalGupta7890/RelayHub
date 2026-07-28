@@ -50,11 +50,17 @@ import { AnalyticsController } from "./presentation/http/controllers/AnalyticsCo
 import { ReplayEventUseCase } from "./application/use-cases/replay/ReplayEventUseCase";
 import { ReplayController } from "./presentation/http/controllers/ReplayController";
 
+import http from "http";
+import { RedisWsEmitter } from "./infrastructure/websocket/RedisWsEmitter";
+import { WebSocketGateway } from "./presentation/websocket/WebSocketGateway";
+
 const env = loadApiEnv();
 const logger = createLogger(env);
 const prisma = getPrismaClient({ logQueries: env.NODE_ENV === "development" });
 const redis = new Redis(env.REDIS_URL);
+const redisSub = new Redis(env.REDIS_URL);
 const queueService = new BullMqQueueService(redis);
+const wsEmitterService = new RedisWsEmitter(redis);
 
 import { PrismaOrganizationRepository, PrismaProjectRepository, PrismaMembershipRepository, PrismaAuditLogRepository, PrismaEnvironmentRepository, PrismaApiKeyRepository } from "@relayhub/database";
 
@@ -105,7 +111,7 @@ const listDestinationsUseCase = new ListDestinationsUseCase(destinationRepositor
 const updateDestinationUseCase = new UpdateDestinationUseCase(destinationRepository);
 const destinationController = new DestinationController(createDestinationUseCase, listDestinationsUseCase, updateDestinationUseCase);
 
-const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService);
+const ingestEventUseCase = new IngestEventUseCase(sourceRepository, eventRepository, queueService, encryptionService, wsEmitterService);
 const ingestionController = new IngestionController(ingestEventUseCase);
 
 const deliveryAttemptRepository = new PrismaDeliveryAttemptRepository(prisma);
@@ -131,14 +137,28 @@ const app = createApp(logger, {
   replayController,
 });
 
-const server = app.listen(env.API_PORT, () => {
+const httpServer = http.createServer(app);
+
+const wsGateway = new WebSocketGateway(
+  httpServer,
+  redis,
+  redisSub,
+  env.JWT_SECRET,
+  environmentRepository,
+  logger
+);
+
+const server = httpServer.listen(env.API_PORT, () => {
   logger.info({ port: env.API_PORT, env: env.NODE_ENV }, "RelayHub API listening");
 });
 
 function shutdown(signal: string) {
   logger.info({ signal }, "Shutting down gracefully");
+  wsGateway.close();
   server.close(async () => {
     await disconnectPrisma();
+    await redis.disconnect();
+    await redisSub.disconnect();
     logger.info("Server closed");
     process.exit(0);
   });

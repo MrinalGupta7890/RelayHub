@@ -12,6 +12,7 @@ import { DeliveryWorker } from "./infrastructure/queue/bullmq/DeliveryWorker";
 import { ReplayWorker } from "./infrastructure/queue/processors/ReplayWorker";
 import { FetchHttpDeliveryService } from "./infrastructure/http/FetchHttpDeliveryService";
 import { AesEncryptionService } from "./infrastructure/crypto/AesEncryptionService";
+import { RedisWsEmitter } from "./infrastructure/websocket/RedisWsEmitter";
 
 const env = loadWorkerEnv();
 const logger = createLogger(env);
@@ -29,6 +30,7 @@ const deliveryAttemptRepository = new PrismaDeliveryAttemptRepository(prisma);
 const queueService = new BullMqQueueService(redis);
 const httpDeliveryService = new FetchHttpDeliveryService();
 const encryptionService = new AesEncryptionService(env.ENCRYPTION_MASTER_KEY);
+const wsEmitterService = new RedisWsEmitter(redis);
 
 // Use Cases
 const eventFanoutUseCase = new EventFanoutUseCase(
@@ -46,6 +48,7 @@ const executeDeliveryUseCase = new ExecuteDeliveryUseCase(
   httpDeliveryService,
   queueService,
   encryptionService,
+  wsEmitterService,
   logger
 );
 

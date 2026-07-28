@@ -7,6 +7,7 @@ import {
   DeliveryStatus,
   QueueService,
   BackoffCalculator,
+  WsEmitterService,
 } from "@relayhub/domain";
 import { AesEncryptionService } from "../../../infrastructure/crypto/AesEncryptionService";
 import { Logger } from "pino";
@@ -19,6 +20,7 @@ export class ExecuteDeliveryUseCase {
     private readonly httpDeliveryService: HttpDeliveryService,
     private readonly queueService: QueueService,
     private readonly encryptionService: AesEncryptionService,
+    private readonly wsEmitterService: WsEmitterService,
     private readonly logger: Logger
   ) {}
 
@@ -89,6 +91,16 @@ export class ExecuteDeliveryUseCase {
       errorMessage: result.error || null,
       durationMs: result.durationMs,
       completedAt: new Date(),
+    });
+
+    // Emit real-time event for the delivery update
+    await this.wsEmitterService.emitDeliveryUpdated(
+      destination.environmentId,
+      event.id,
+      attempt.id,
+      finalStatus
+    ).catch(err => {
+      this.logger.error({ err, attemptId: attempt.id }, "Failed to emit real-time delivery update");
     });
 
     if (!result.success) {
